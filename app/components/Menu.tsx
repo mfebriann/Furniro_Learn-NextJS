@@ -1,19 +1,63 @@
 "use client";
 
+import { useEffect, useRef, useCallback } from "react";
 import MenuItem from "./MenuItem";
-import { useClickOutside } from "@/hooks";
+import {
+  useMenuOpen,
+  useToggleMenu,
+  useCloseMenu,
+  useCartCount,
+  useFavoriteCount,
+} from "@/app/stores/menuStore";
+import IconHeader from "./IconHeader";
 
 const Menu = () => {
-  const {
-    ref: menuRef,
-    isOpen: isMenuOpen,
-    toggle: handleMenuToggle,
-  } = useClickOutside();
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Ambil state dan actions dari store menggunakan individual selectors
+  const isMenuOpen = useMenuOpen();
+  const toggleMenu = useToggleMenu();
+  const closeMenu = useCloseMenu();
+  const cartItemCount = useCartCount();
+  const favoriteCount = useFavoriteCount();
+
+  // Memoize event handlers untuk mencegah re-creation
+  const handleClickOutside = useCallback(
+    (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        closeMenu();
+      }
+    },
+    [closeMenu],
+  );
+
+  const handleEscapeKey = useCallback(
+    (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeMenu();
+      }
+    },
+    [closeMenu],
+  );
+
+  // Handle click outside dan escape key
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleEscapeKey);
+
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+        document.removeEventListener("keydown", handleEscapeKey);
+      };
+    }
+  }, [isMenuOpen, handleClickOutside, handleEscapeKey]);
 
   return (
     <div>
       <div className="flex items-center gap-x-4 sm:gap-x-11">
-        <div className="hidden sm:block">
+        {/* User Profile Icon */}
+        <IconHeader className="hidden sm:block">
           <svg
             width="28"
             height="28"
@@ -26,8 +70,10 @@ const Menu = () => {
               fill="#302E2E"
             />
           </svg>
-        </div>
-        <div>
+        </IconHeader>
+
+        {/* Search Icon */}
+        <IconHeader>
           <svg
             width="24"
             height="24"
@@ -42,8 +88,10 @@ const Menu = () => {
               strokeLinecap="round"
             />
           </svg>
-        </div>
-        <div>
+        </IconHeader>
+
+        {/* Favorites Icon with Counter */}
+        <IconHeader className="relative">
           <svg
             width="24"
             height="24"
@@ -59,8 +107,15 @@ const Menu = () => {
               strokeLinejoin="round"
             />
           </svg>
-        </div>
-        <div>
+          {favoriteCount > 0 && (
+            <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white">
+              {favoriteCount > 99 ? "99+" : favoriteCount}
+            </span>
+          )}
+        </IconHeader>
+
+        {/* Cart Icon with Counter */}
+        <IconHeader className="relative">
           <svg
             width="24"
             height="24"
@@ -73,21 +128,26 @@ const Menu = () => {
               fill="#302E2E"
             />
           </svg>
-        </div>
+          {cartItemCount > 0 && (
+            <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white">
+              {cartItemCount > 99 ? "99+" : cartItemCount}
+            </span>
+          )}
+        </IconHeader>
       </div>
+
+      {/* Floating Menu Button */}
       <div
         className="fixed right-3 bottom-5 flex flex-col items-end gap-y-5"
         ref={menuRef}
       >
         <MenuItem isMenuOpen={isMenuOpen} />
         <div className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-slate-800 bg-white">
-          <input
-            type="checkbox"
-            name="menu-toggle"
-            id="menu-toggle"
-            className="absolute top-0 left-0 h-full w-full opacity-0"
-            checked={isMenuOpen}
-            onChange={handleMenuToggle}
+          <button
+            type="button"
+            className="absolute top-0 left-0 h-full w-full cursor-pointer opacity-0"
+            onClick={toggleMenu}
+            aria-label="Toggle menu"
           />
           <svg
             width="32"
